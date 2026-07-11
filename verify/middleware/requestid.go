@@ -22,9 +22,7 @@ func RequestIDMiddleware() gin.HandlerFunc {
 
 		ctx := context.WithValue(c.Request.Context(), requestIDKey, requestID)
 		c.Request = c.Request.WithContext(ctx)
-
-		log.NewLoggerOnRuntime(log.RegisterRuntime{Key: "request_id", Value: requestID})
-		defer log.DeferDeleteRuntimeValue()
+		c.Header("X-Request-Id", requestID)
 
 		c.Next()
 	}
@@ -34,7 +32,8 @@ func RecoveryMiddleware() gin.HandlerFunc {
 	return gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, err any) {
 		stack := make([]byte, 4096)
 		stack = stack[:runtime.Stack(stack, false)]
-		log.Error("panic recovered",
+		logger := log.CtxLogger(c.Request.Context())
+		logger.Error("panic recovered",
 			zap.Any("error", err),
 			zap.String("stack", string(stack)),
 		)

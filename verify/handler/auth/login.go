@@ -31,10 +31,11 @@ type authResponse struct {
 func (h *Handler) Login(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+	logger := log.CtxLogger(ctx)
 
 	var req LoginReqBody
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Error("bind login payload", zap.Error(err))
+		logger.Error("bind login payload", zap.Error(err))
 		response.BadRequest(c, "invalid request body")
 		return
 	}
@@ -58,7 +59,7 @@ func (h *Handler) Login(c *gin.Context) {
 		case errors.Is(err, repository.ErrMissingContact):
 			response.BadRequest(c, "email or number is required")
 		default:
-			log.Error("login", zap.Error(err))
+			logger.Error("login", zap.Error(err))
 			response.InternalError(c, "something went wrong")
 		}
 		return
@@ -73,6 +74,7 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) Logout(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
+	logger := log.CtxLogger(ctx)
 
 	authUser, err := middleware.GetUserFromContext(c)
 	if err != nil {
@@ -81,7 +83,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	if err := h.authSvc.Logout(ctx, authUser.UserID); err != nil {
-		log.Error("logout", zap.Error(err))
+		logger.Error("logout", zap.Error(err))
 		response.InternalError(c, "something went wrong")
 		return
 	}

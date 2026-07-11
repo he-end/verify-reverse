@@ -61,14 +61,14 @@ func (h *Handler) WhatsAppVerify(c *gin.Context) {
 func (h *Handler) WhatsAppHandler(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		log.Error("failed to read webhook body", zap.Error(err))
+		log.CtxLogger(c.Request.Context()).Error("failed to read webhook body", zap.Error(err))
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	var payload webhookBody
 	if err := json.Unmarshal(body, &payload); err != nil {
-		log.Error("failed to parse webhook body", zap.Error(err))
+		log.CtxLogger(c.Request.Context()).Error("failed to parse webhook body", zap.Error(err))
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -87,10 +87,11 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 
 				ctx, cancel := context.WithTimeout(c.Request.Context(), 15*time.Second)
 				defer cancel()
+				logger := log.CtxLogger(ctx)
 
 				blocked, err := h.attemptRepo.IsBlocked(ctx, msg.From, "wa")
 				if err != nil {
-					log.Warn("attempt check failed", zap.String("from", msg.From), zap.Error(err))
+					logger.Warn("attempt check failed", zap.String("from", msg.From), zap.Error(err))
 				} else if blocked {
 					cancel()
 					c.Status(http.StatusOK)
@@ -99,7 +100,7 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 
 				verified, err := h.authSvc.IsAlreadyVerified(ctx, msg.From)
 				if err != nil {
-					log.Warn("verified check failed", zap.String("from", msg.From), zap.Error(err))
+					logger.Warn("verified check failed", zap.String("from", msg.From), zap.Error(err))
 				} else if verified {
 					cancel()
 					c.Status(http.StatusOK)
@@ -109,7 +110,7 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 				matches := verifyCodePattern.FindStringSubmatch(msg.Text.Body)
 				if len(matches) != 2 {
 					if err := h.attemptRepo.RecordFailed(ctx, msg.From, "wa"); err != nil {
-						log.Error("record failed attempt", zap.String("from", msg.From), zap.Error(err))
+						logger.Error("record failed attempt", zap.String("from", msg.From), zap.Error(err))
 					}
 					cancel()
 					continue
@@ -124,11 +125,11 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 					case errors.Is(err, repository.ErrNotFound):
 						h.wa.SendMessage(ctx, msg.From, "Kode verifikasi tidak ditemukan.")
 					default:
-						log.Error("verification failed", zap.Error(err))
+						logger.Error("verification failed", zap.Error(err))
 						h.wa.SendMessage(ctx, msg.From, "Verifikasi gagal, silakan coba lagi.")
 					}
 					if recErr := h.attemptRepo.RecordFailed(ctx, msg.From, "wa"); recErr != nil {
-						log.Error("record failed attempt", zap.String("from", msg.From), zap.Error(recErr))
+						logger.Error("record failed attempt", zap.String("from", msg.From), zap.Error(recErr))
 					}
 					cancel()
 					c.Status(http.StatusOK)
@@ -136,11 +137,11 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 				}
 
 				if err := h.attemptRepo.ResetAttempts(ctx, msg.From, "wa"); err != nil {
-					log.Warn("reset attempts failed", zap.String("from", msg.From), zap.Error(err))
+					logger.Warn("reset attempts failed", zap.String("from", msg.From), zap.Error(err))
 				}
 
 				h.wa.SendMessage(ctx, msg.From, "Verifikasi berhasil, user Anda telah aktif. Silakan login.")
-				log.Info("user verified via WhatsApp", zap.String("user_id", user.ID.String()))
+				logger.Info("user verified via WhatsApp", zap.String("user_id", user.ID.String()))
 				cancel()
 				c.Status(http.StatusOK)
 				return

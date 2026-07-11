@@ -66,10 +66,11 @@ type emailRegisterResponse struct {
 func (h *Handler) RegisterViaWA(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+	logger := log.CtxLogger(ctx)
 
 	var req RegisterViaWAReqBody
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Error("bind register WA payload", zap.Error(err))
+		logger.Error("bind register WA payload", zap.Error(err))
 		response.BadRequest(c, "invalid request body")
 		return
 	}
@@ -96,7 +97,7 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 		case errors.Is(err, repository.ErrVerificationPending):
 			response.TooManyRequests(c, "verification already pending, wait or retry after expiry")
 		default:
-			log.Error("initiate WA verification", zap.Error(err))
+			logger.Error("initiate WA verification", zap.Error(err))
 			response.InternalError(c, "something went wrong")
 		}
 		return
@@ -104,7 +105,7 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 
 	link, qrLink, err := h.wa.CreateLinkRegister(ctx, *code, *req.Number)
 	if err != nil {
-		log.Error("create QR link", zap.Error(err))
+		logger.Error("create QR link", zap.Error(err))
 		response.InternalError(c, "something went wrong")
 		return
 	}
@@ -133,10 +134,11 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 func (h *Handler) RegisterViaEmail(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
+	logger := log.CtxLogger(ctx)
 
 	var req RegisterViaEmailReqBody
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Error("bind register email payload", zap.Error(err))
+		logger.Error("bind register email payload", zap.Error(err))
 		response.BadRequest(c, "invalid request body")
 		return
 	}
@@ -167,7 +169,7 @@ func (h *Handler) RegisterViaEmail(c *gin.Context) {
 		case errors.Is(err, repository.ErrMissingContact):
 			response.BadRequest(c, "email is required")
 		default:
-			log.Error("register via email", zap.Error(err))
+			logger.Error("register via email", zap.Error(err))
 			response.InternalError(c, "something went wrong")
 		}
 		return
