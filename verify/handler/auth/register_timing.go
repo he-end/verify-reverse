@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	registerMinDelay = 4000
-	registerMaxDelay = 8000
+	registerMinDelay = 1950
+	registerMaxDelay = 5422
 )
 
 func sleepRemaining(elapsed time.Duration) time.Duration {
