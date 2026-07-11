@@ -3,7 +3,6 @@ package webhook
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -13,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/he-end/verify-reverse/verify/log"
-	"github.com/he-end/verify-reverse/verify/repository"
 )
 
 type webhookEntry struct {
@@ -119,15 +117,7 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 
 				user, err := h.authSvc.CompleteWAVerify(ctx, code)
 				if err != nil {
-					switch {
-					case errors.Is(err, repository.ErrVerificationExpired):
-						h.wa.SendMessage(ctx, msg.From, "Kode verifikasi sudah kadaluwarsa. Silakan daftar ulang untuk mendapatkan kode baru.")
-					case errors.Is(err, repository.ErrNotFound):
-						h.wa.SendMessage(ctx, msg.From, "Kode verifikasi tidak ditemukan.")
-					default:
-						logger.Error("verification failed", zap.Error(err))
-						h.wa.SendMessage(ctx, msg.From, "Verifikasi gagal, silakan coba lagi.")
-					}
+					logger.Error("verification failed", zap.Error(err))
 					if recErr := h.attemptRepo.RecordFailed(ctx, msg.From, "wa"); recErr != nil {
 						logger.Error("record failed attempt", zap.String("from", msg.From), zap.Error(recErr))
 					}
@@ -140,7 +130,7 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 					logger.Warn("reset attempts failed", zap.String("from", msg.From), zap.Error(err))
 				}
 
-				h.wa.SendMessage(ctx, msg.From, "Verifikasi berhasil, user Anda telah aktif. Silakan login.")
+				h.wa.SendMessage(ctx, msg.From, "Verifikasi berhasil.")
 				logger.Info("user verified via WhatsApp", zap.String("user_id", user.ID.String()))
 				cancel()
 				c.Status(http.StatusOK)

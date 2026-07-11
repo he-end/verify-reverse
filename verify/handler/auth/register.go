@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
@@ -11,8 +10,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/he-end/verify-reverse/verify/log"
-	"github.com/he-end/verify-reverse/verify/repository"
-	authrepo "github.com/he-end/verify-reverse/verify/repository/auth"
 	"github.com/he-end/verify-reverse/verify/response"
 	"github.com/he-end/verify-reverse/verify/service"
 	authsvc "github.com/he-end/verify-reverse/verify/service/auth"
@@ -50,20 +47,16 @@ type RegisterViaEmailReqBody struct {
 	ConfirmPwd *string `json:"confirm_pwd"`
 }
 
-type waRegisterResponse struct {
-	Code      string    `json:"code"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Link      string    `json:"link"`
-	QrLink    string    `json:"qr_link"`
-	Message   string    `json:"message"`
-}
-
-type emailRegisterResponse struct {
-	User  authrepo.UserResponse `json:"user"`
-	Token authsvc.TokenPair     `json:"token"`
+type RegisterViaEmailResBody struct {
+	Message string `json:"message"`
+	Link    string `json:"link"`
+	QRLink  string `json:"qr_link"`
 }
 
 func (h *Handler) RegisterViaWA(c *gin.Context) {
+	start := time.Now()
+	defer func() { sleepRemaining(time.Since(start)) }()
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 	logger := log.CtxLogger(ctx)
@@ -89,49 +82,41 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 		pwd = *req.Pwd
 	}
 
-	code, expiresAt, err := h.authSvc.InitiateWAVerify(ctx, *req.Number, name, pwd)
+	var link, qrLink *string
+
+	code, _, err := h.authSvc.InitiateWAVerify(ctx, *req.Number, name, pwd)
 	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrDuplicateKey):
-			response.Conflict(c, "phone number already registered")
-		case errors.Is(err, repository.ErrVerificationPending):
-			response.TooManyRequests(c, "verification already pending, wait or retry after expiry")
-		default:
-			logger.Error("initiate WA verification", zap.Error(err))
-			response.InternalError(c, "something went wrong")
+		logger.Error("initiate WA verification", zap.Error(err))
+	} else {
+		link, qrLink, err = h.wa.CreateLinkRegister(ctx, *code, *req.Number)
+		if err != nil {
+			logger.Error("create QR link", zap.Error(err))
 		}
-		return
+	}
+	resBody := RegisterViaEmailResBody{
+		Message: "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan. silakan scan QR atau akses link ini.",
+		Link:    *link,
+		QRLink:  *qrLink,
 	}
 
-	link, qrLink, err := h.wa.CreateLinkRegister(ctx, *code, *req.Number)
-	if err != nil {
-		logger.Error("create QR link", zap.Error(err))
-		response.InternalError(c, "something went wrong")
-		return
-	}
-	resBody := waRegisterResponse{
-		Code:      *code,
-		ExpiresAt: expiresAt,
-		Link:      *link,
-		QrLink:    *qrLink,
-		Message:   "Scan QR code and send the verification message to complete registration",
-	}
 	enc := json.NewEncoder(c.Writer)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(resBody); err != nil {
+		logger.Warn("encode reseponse error", zap.Error(err))
 		response.InternalError(c, "something went wrong")
 		return
 	}
-	// response.OK(c, waRegisterResponse{
-	// 	Code:      *code,
-	// 	ExpiresAt: expiresAt,
-	// 	Link:      *link,
-	// 	QrLink:    *qrLink,
-	// 	Message:   "Scan QR code and send the verification message to complete registration",
+	// response.OK(c, gin.H{
+	// 	"message": "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan",
+	// 	"link":    link,
+	// 	"qrlink":  qrLink,
 	// })
 }
 
 func (h *Handler) RegisterViaEmail(c *gin.Context) {
+	start := time.Now()
+	defer func() { sleepRemaining(time.Since(start)) }()
+
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 	defer cancel()
 	logger := log.CtxLogger(ctx)
@@ -157,26 +142,14 @@ func (h *Handler) RegisterViaEmail(c *gin.Context) {
 		pwd = *req.Pwd
 	}
 
-	user, tokens, err := h.authSvc.Register(ctx, authsvc.RegisterInput{
+	_, _, err := h.authSvc.Register(ctx, authsvc.RegisterInput{
 		Email: req.Email,
 		Name:  name,
 		Pwd:   pwd,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrDuplicateKey):
-			response.Conflict(c, "email already registered")
-		case errors.Is(err, repository.ErrMissingContact):
-			response.BadRequest(c, "email is required")
-		default:
-			logger.Error("register via email", zap.Error(err))
-			response.InternalError(c, "something went wrong")
-		}
-		return
+		logger.Error("register via email", zap.Error(err))
 	}
 
-	response.OK(c, emailRegisterResponse{
-		User:  user.ToResponse(),
-		Token: *tokens,
-	})
+	response.OK(c, gin.H{"message": "jika email memenuhi syarat, link verifikasi telah disiapkan"})
 }

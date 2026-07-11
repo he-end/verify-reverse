@@ -18,7 +18,8 @@ var (
 )
 
 var (
-	ErrTooManyAttempts = errors.New("too many verification attempts")
-	ErrSenderBlocked   = errors.New("sender is temporarily blocked")
-	ErrAlreadyVerified = errors.New("contact already verified")
+	ErrTooManyAttempts      = errors.New("too many verification attempts")
+	ErrSenderBlocked        = errors.New("sender is temporarily blocked")
+	ErrAlreadyVerified      = errors.New("contact already verified")
+	ErrVerificationNotValid = errors.New("verification not valid")
 )

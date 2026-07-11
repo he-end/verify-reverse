@@ -172,20 +172,24 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*auth.User, 
 }
 
 func (s *AuthService) InitiateWAVerify(ctx context.Context, number, name, pwd string) (*string, time.Time, error) {
+	isPhantom := false
+
 	exists, err := s.repo.ExistsByNumber(ctx, number)
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("check number exists: %w", err)
 	}
 	if exists {
-		return nil, time.Time{}, repository.ErrDuplicateKey
+		isPhantom = true
 	}
 
-	pending, err := s.verifyRepo.ExistsPending(ctx, number, "wa")
-	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("check pending verification: %w", err)
-	}
-	if pending {
-		return nil, time.Time{}, repository.ErrVerificationPending
+	if !isPhantom {
+		pending, err := s.verifyRepo.ExistsPending(ctx, number, "wa")
+		if err != nil {
+			return nil, time.Time{}, fmt.Errorf("check pending verification: %w", err)
+		}
+		if pending {
+			isPhantom = true
+		}
 	}
 
 	code, err := generateVerificationCode()
@@ -216,6 +220,7 @@ func (s *AuthService) InitiateWAVerify(ctx context.Context, number, name, pwd st
 		Name:         name,
 		PasswordHash: passwordHash,
 		ExpiresAt:    expiresAt,
+		IsPhantom:    isPhantom,
 	}
 
 	if err := s.verifyRepo.Create(ctx, vc); err != nil {
@@ -240,6 +245,10 @@ func (s *AuthService) CompleteWAVerify(ctx context.Context, code string) (*auth.
 	vc, err := s.verifyRepo.FindByCode(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("find verification code: %w", err)
+	}
+
+	if vc.IsPhantom {
+		return nil, repository.ErrVerificationNotValid
 	}
 
 	userID, err := uuid.NewV7()

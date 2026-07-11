@@ -22,6 +22,7 @@ type VerificationCode struct {
 	CreatedAt     time.Time  `bun:"created_at,notnull"`
 	UsedAt        *time.Time `bun:"used_at"`
 	UserID        *uuid.UUID `bun:"user_id"`
+	IsPhantom     bool       `bun:"is_phantom,notnull,default:false"`
 }
 
 type VerificationRepository struct {
