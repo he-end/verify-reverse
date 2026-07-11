@@ -17,7 +17,7 @@ Registrasi Konvensional:
   User → Daftar → Server kirim Kode ke User → User masukkan Kode → Verifikasi
 
 Reverse Verify:
-  User → Daftar → Server berikan QR/link berisi Kode → User kirim balik Kode via WA → Verifikasi
+  User → Daftar → Server berikan deep link berisi Kode → Klien generate QR → User kirim balik Kode via WA → Verifikasi
 ```
 
 ---
@@ -114,13 +114,14 @@ Base path: `/api/v1.0`
 ```
 1. User → POST /wa-register { nomor, nama, password? }
 2. Server → Generate kode: "VRFY-XXXXXXXX"
-3. Server → Buat QR code WhatsApp dengan pesan pre-filled
-4. Server → Berikan QR link ke user (selalu sukses, termasuk phantom)
-5. User → Scan QR → WhatsApp terbuka → Kirim "VERIFY:VRFY-XXXXXXXX"
-6. Server → Terima webhook WhatsApp → Parse kode → Verifikasi
-7. Server → Buat akun user + tandai kode sebagai used
-8. Server → Balas WhatsApp: "Verifikasi berhasil."
-9. User → Login dengan JWT
+3. Server → Bentuk deep link wa.me/?text=VERIFY:VRFY-XXXXXXXX
+4. Server → Berikan deep link ke klien (selalu sukses, termasuk phantom)
+5. Klien → Generate QR dari deep link (client-side, tanpa panggil Meta API)
+6. User → Scan QR / klik link → WhatsApp terbuka → Kirim pesan pre-filled
+7. Server → Terima webhook WhatsApp → Parse kode → Verifikasi
+8. Server → Buat akun user + tandai kode sebagai used
+9. Server → Balas WhatsApp: "Verifikasi berhasil."
+10. User → Login dengan JWT
 ```
 
 ---
@@ -207,7 +208,8 @@ Lihat `.env.example` untuk template lengkap.
 | `DB_SSLMODE` | SSL mode | `disable` |
 | `TOKEN_WHATSAPP` | Token akses WhatsApp Cloud API | — |
 | `BASE_URL_GRAPH_API` | Base URL Meta Graph API | — |
-| `PHONE_NUMBER_ID` | ID nomor WhatsApp bisnis | — |
+| `PHONE_NUMBER_ID` | ID nomor WhatsApp bisnis (Meta) | — |
+| `WHATSAPP_PHONE` | Nomor WhatsApp format internasional tanpa `+` (untuk wa.me) | — |
 | `JWT_ACCESS_SECRET` | Secret untuk access token | — |
 | `JWT_REFRESH_SECRET` | Secret untuk refresh token | — |
 | `JWT_ACCESS_TTL` | Durasi access token | `15m` |
