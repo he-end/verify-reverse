@@ -94,7 +94,7 @@ func (s *WaService) getQr(ctx context.Context, code *string) (*GetQRRes, error) 
 	}
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return nil, fmt.Errorf("cannot getting QR")
+		return nil, fmt.Errorf("cannot get QR")
 	}
 
 	var dataQr GetQRRes
@@ -150,7 +150,7 @@ func (s *WaService) deleteQR(ctx context.Context, code string) error {
 	}
 
 	if !resOK.Success {
-		return fmt.Errorf("delete QR failed")
+		return fmt.Errorf("delete QR: success field false")
 	}
 	return nil
 }

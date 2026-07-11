@@ -45,7 +45,10 @@ func (r *SessionRepository) FindByRefreshToken(ctx context.Context, token string
 
 func (r *SessionRepository) DeleteByUserID(ctx context.Context, userID uuid.UUID) error {
 	_, err := r.db.NewDelete().Model((*Session)(nil)).Where("user_id = ?", userID).Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("delete sessions by user: %w", err)
+	}
+	return nil
 }
 
 func (r *SessionRepository) DeleteExpired(ctx context.Context) (int64, error) {

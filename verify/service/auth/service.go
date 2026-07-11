@@ -288,5 +288,8 @@ func UserHashFallback(userID uuid.UUID, status string) string {
 }
 
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
-	return s.sessionRepo.DeleteByUserID(ctx, userID)
+	if err := s.sessionRepo.DeleteByUserID(ctx, userID); err != nil {
+		return fmt.Errorf("logout: %w", err)
+	}
+	return nil
 }

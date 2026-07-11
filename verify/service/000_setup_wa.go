@@ -47,6 +47,8 @@ func (w *whatsappConf) buildReq(ctx context.Context, method string, url string, 
 		return nil, fmt.Errorf("build HTTP request: %w", err)
 	}
 	newReq.Header.Set("Authorization", fmt.Sprintf("Bearer %v", *w.TokenWhatsApp))
-	newReq.Header.Set("Content-Type", "application/json")
+	if body != nil {
+		newReq.Header.Set("Content-Type", "application/json")
+	}
 	return newReq, nil
 }
