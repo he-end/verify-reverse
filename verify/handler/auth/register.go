@@ -47,7 +47,7 @@ type RegisterViaEmailReqBody struct {
 	ConfirmPwd *string `json:"confirm_pwd"`
 }
 
-type RegisterViaEmailResBody struct {
+type RegisterViaWAResBody struct {
 	Message string `json:"message"`
 	Link    string `json:"link"`
 	QRLink  string `json:"qr_link"`
@@ -96,7 +96,7 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 
 	c.Header("Conten-Type", "application/json")
 
-	resBody := RegisterViaEmailResBody{
+	resBody := RegisterViaWAResBody{
 		Message: "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan. silakan scan QR atau akses link ini.",
 		// Link:    *link,
 		// QRLink:  *qrLink,
