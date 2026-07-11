@@ -32,6 +32,16 @@ func main() {
 	router := gin.New()
 	router.RedirectTrailingSlash = false
 	router.Use(middleware.RequestIDMiddleware())
+	router.Use(func(c *gin.Context) {
+		requestID := middleware.GetRequestID(c)
+		logger := log.GetLogger()
+		if requestID != "" {
+			logger = logger.With(zap.String("request_id", requestID))
+		}
+		ctx := log.WithLogger(c.Request.Context(), logger)
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	})
 	router.Use(middleware.RecoveryMiddleware())
 	container.RegisterRoutes(router)
 
