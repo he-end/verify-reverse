@@ -93,10 +93,26 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 			logger.Error("create QR link", zap.Error(err))
 		}
 	}
+
+	c.Header("Conten-Type", "application/json")
+
 	resBody := RegisterViaEmailResBody{
 		Message: "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan. silakan scan QR atau akses link ini.",
-		Link:    *link,
-		QRLink:  *qrLink,
+		// Link:    *link,
+		// QRLink:  *qrLink,
+	}
+
+	if link == nil && qrLink == nil {
+		logger.Warn("generate link error", zap.Error(err))
+		response.InternalError(c, "something went wrong")
+		return
+	} else {
+		if link != nil {
+			resBody.Link = *link
+		}
+		if qrLink != nil {
+			resBody.QRLink = *qrLink
+		}
 	}
 
 	enc := json.NewEncoder(c.Writer)
