@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -47,10 +46,19 @@ type RegisterViaEmailReqBody struct {
 	ConfirmPwd *string `json:"confirm_pwd"`
 }
 
+// RegisterViaWAResBody is the response for WhatsApp registration.
+// The client MUST:
+//  1. Parse the "link" field — it is a wa.me deep link URL.
+//  2. Render a QR code from the link using a client-side library
+//     (e.g., qrcode.js: QRCode.toDataURL(link) → <img src="...">).
+//  3. Display both the QR image AND the link as a clickable fallback.
+//  4. When the user scans the QR or clicks the link, WhatsApp opens
+//     with the verification message pre-filled. The user taps "Send".
+//  5. The server receives the message via webhook, verifies the code,
+//     and sends a confirmation reply via WhatsApp.
 type RegisterViaWAResBody struct {
 	Message string `json:"message"`
 	Link    string `json:"link"`
-	QRLink  string `json:"qr_link"`
 }
 
 func (h *Handler) RegisterViaWA(c *gin.Context) {
@@ -82,51 +90,19 @@ func (h *Handler) RegisterViaWA(c *gin.Context) {
 		pwd = *req.Pwd
 	}
 
-	var link, qrLink *string
-
 	code, _, err := h.authSvc.InitiateWAVerify(ctx, *req.Number, name, pwd)
 	if err != nil {
 		logger.Error("initiate WA verification", zap.Error(err))
-	} else {
-		link, qrLink, err = h.wa.CreateLinkRegister(ctx, *code, *req.Number)
-		if err != nil {
-			logger.Error("create QR link", zap.Error(err))
-		}
+		response.InternalError(c, "something went wrong")
+		return
 	}
 
-	c.Header("Conten-Type", "application/json")
+	link := h.wa.CreateLinkRegister(*code)
 
-	resBody := RegisterViaWAResBody{
+	response.OK(c, RegisterViaWAResBody{
 		Message: "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan. silakan scan QR atau akses link ini.",
-		// Link:    *link,
-		// QRLink:  *qrLink,
-	}
-
-	if link == nil && qrLink == nil {
-		logger.Warn("generate link error", zap.Error(err))
-		response.InternalError(c, "something went wrong")
-		return
-	} else {
-		if link != nil {
-			resBody.Link = *link
-		}
-		if qrLink != nil {
-			resBody.QRLink = *qrLink
-		}
-	}
-
-	enc := json.NewEncoder(c.Writer)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(resBody); err != nil {
-		logger.Warn("encode reseponse error", zap.Error(err))
-		response.InternalError(c, "something went wrong")
-		return
-	}
-	// response.OK(c, gin.H{
-	// 	"message": "jika nomor memenuhi syarat, link verifikasi WhatsApp telah disiapkan",
-	// 	"link":    link,
-	// 	"qrlink":  qrLink,
-	// })
+		Link:    link,
+	})
 }
 
 func (h *Handler) RegisterViaEmail(c *gin.Context) {

@@ -31,6 +31,7 @@ type WAConf struct {
 	TokenWhatsApp   string
 	BaseURLGraphAPI string
 	PhoneNumberID   string
+	WhatsAppPhone   string
 }
 
 type DBConf struct {
@@ -77,6 +78,7 @@ func GetEnv() *Conf {
 			TokenWhatsApp:   os.Getenv("TOKEN_WHATSAPP"),
 			BaseURLGraphAPI: os.Getenv("BASE_URL_GRAPH_API"),
 			PhoneNumberID:   os.Getenv("PHONE_NUMBER_ID"),
+			WhatsAppPhone:   os.Getenv("WHATSAPP_PHONE"),
 		},
 		EmailConf: &EmailConf{
 			SMTPPort: os.Getenv("SMTP_PORT"),

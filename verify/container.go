@@ -25,7 +25,7 @@ type Container struct {
 }
 
 func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
-	wa := service.SetupWAService(cfg.TokenWhatsApp, cfg.BaseURLGraphAPI, cfg.PhoneNumberID)
+	wa := service.SetupWAService(cfg.TokenWhatsApp, cfg.BaseURLGraphAPI, cfg.PhoneNumberID, cfg.WhatsAppPhone)
 	val := service.Default()
 
 	db, err := repository.NewPostgresDB(ctx, cfg.DBConf.DSN())

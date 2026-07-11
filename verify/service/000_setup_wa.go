@@ -12,6 +12,7 @@ type whatsappConf struct {
 	TokenWhatsApp   *string
 	BaseURLGraphAPI *string
 	PhoneNumberID   *string
+	PhoneNumber     *string
 }
 
 type WaService struct {
@@ -19,12 +20,13 @@ type WaService struct {
 	buildMessage
 }
 
-func SetupWAService(token string, baseUrGraphAPI string, phoneNumberID string) *WaService {
+func SetupWAService(token string, baseUrGraphAPI string, phoneNumberID string, phoneNumber string) *WaService {
 	return &WaService{
 		conf: &whatsappConf{
 			TokenWhatsApp:   &token,
 			BaseURLGraphAPI: &baseUrGraphAPI,
 			PhoneNumberID:   &phoneNumberID,
+			PhoneNumber:     &phoneNumber,
 		},
 		buildMessage: &msg{},
 	}

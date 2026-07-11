@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"time"
 
 	"go.uber.org/zap"
@@ -155,12 +156,9 @@ func (s *WaService) deleteQR(ctx context.Context, code string) error {
 	return nil
 }
 
-func (s *WaService) CreateLinkRegister(ctx context.Context, codeRegister, numerUser string) (link *string, qrUrl *string, err error) {
-	qr, err := s.createQR(ctx, s.buildMessage.registerAccount(codeRegister))
-	if err != nil {
-		return nil, nil, fmt.Errorf("create QR for registration: %w", err)
-	}
-	return &qr.DeepLinkURL, &qr.QRImgURL, nil
+func (s *WaService) CreateLinkRegister(codeRegister string) string {
+	msg := url.QueryEscape("VERIFY:" + codeRegister)
+	return fmt.Sprintf("https://wa.me/%s?text=%s", *s.conf.PhoneNumber, msg)
 }
 
 func (s *WaService) SendMessage(ctx context.Context, to, text string) error {
