@@ -115,7 +115,7 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 				}
 				code := matches[1]
 
-				user, err := h.authSvc.CompleteWAVerify(ctx, code)
+				user, err := h.authSvc.CompleteWAVerify(ctx, code, msg.From)
 				if err != nil {
 					logger.Error("verification failed", zap.Error(err))
 					if recErr := h.attemptRepo.RecordFailed(ctx, msg.From, "wa"); recErr != nil {

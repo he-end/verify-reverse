@@ -96,7 +96,7 @@ func TestInitiateWAVerifyNoPhantomForNewNumber(t *testing.T) {
 		t.Fatal("expected a non-zero expiry time")
 	}
 
-	user, err := ts.svc.CompleteWAVerify(ctx, *code)
+	user, err := ts.svc.CompleteWAVerify(ctx, *code, number)
 	if err != nil {
 		t.Fatalf("CompleteWAVerify should succeed for non-phantom code, got: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestCompleteWAVerifyPhantomReturnsError(t *testing.T) {
 		t.Fatalf("InitiateWAVerify failed: %v", err)
 	}
 
-	_, err = ts.svc.CompleteWAVerify(ctx, *code)
+	_, err = ts.svc.CompleteWAVerify(ctx, *code, number)
 	if !errors.Is(err, repository.ErrVerificationNotValid) {
 		t.Errorf("expected ErrVerificationNotValid, got: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestCompleteWAVerifySuccess(t *testing.T) {
 		t.Fatalf("InitiateWAVerify failed: %v", err)
 	}
 
-	user, err := ts.svc.CompleteWAVerify(ctx, *code)
+	user, err := ts.svc.CompleteWAVerify(ctx, *code, number)
 	if err != nil {
 		t.Fatalf("CompleteWAVerify failed: %v", err)
 	}

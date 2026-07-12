@@ -241,8 +241,8 @@ func (s *AuthService) IsAlreadyVerified(ctx context.Context, contact string) (bo
 	return true, nil
 }
 
-func (s *AuthService) CompleteWAVerify(ctx context.Context, code string) (*auth.User, error) {
-	vc, err := s.verifyRepo.FindByCode(ctx, code)
+func (s *AuthService) CompleteWAVerify(ctx context.Context, code, contact string) (*auth.User, error) {
+	vc, err := s.verifyRepo.FindByCodeAndContact(ctx, code, contact)
 	if err != nil {
 		return nil, fmt.Errorf("find verification code: %w", err)
 	}

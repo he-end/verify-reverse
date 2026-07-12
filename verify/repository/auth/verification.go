@@ -37,10 +37,11 @@ func NewVerificationRepository(db *bun.DB) *VerificationRepository {
 	}
 }
 
-func (r *VerificationRepository) FindByCode(ctx context.Context, code string) (*VerificationCode, error) {
+func (r *VerificationRepository) FindByCodeAndContact(ctx context.Context, code, contact string) (*VerificationCode, error) {
 	var vc VerificationCode
 	err := r.db.NewSelect().Model(&vc).
 		Where("vc.code = ?", code).
+		Where("vc.contact = ?", contact).
 		Where("vc.used_at IS NULL").
 		Scan(ctx)
 	if err != nil {
