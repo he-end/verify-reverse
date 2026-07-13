@@ -21,6 +21,7 @@ Lihat `.env.example` untuk template lengkap.
 | `BASE_URL_GRAPH_API` | Base URL Meta Graph API | — |
 | `PHONE_NUMBER_ID` | ID nomor WhatsApp bisnis (Meta) | — |
 | `WHATSAPP_PHONE` | Nomor WhatsApp format internasional tanpa `+` (untuk wa.me) | — |
+| `WEBHOOK_APP_SECRET` | Meta App Secret untuk validasi signature webhook (HMAC SHA-256). Diperoleh dari Meta Developer Dashboard → App Settings → Basic. Jika kosong, semua request webhook akan ditolak (`403`). | — |
 
 ## SMTP / Email
 

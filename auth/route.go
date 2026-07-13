@@ -12,7 +12,7 @@ func (c *Container) RegisterRoutes(r *gin.Engine) {
 	api := r.Group("/api/v1.0")
 
 	api.GET("/csrf-token", middleware.CSRFTokenHandler(c.cfg))
-	api.POST("/whatsapp/", c.Webhook.WhatsAppHandler)
+	api.POST("/whatsapp/", middleware.VerifyMetaWebhook(c.cfg.WebhookAppSecret), c.Webhook.WhatsAppHandler)
 
 	csrf := api.Group("")
 	csrf.Use(middleware.CSRFMiddleware(c.cfg))

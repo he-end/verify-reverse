@@ -35,10 +35,11 @@ type EmailConf struct {
 }
 
 type WAConf struct {
-	TokenWhatsApp   string
-	BaseURLGraphAPI string
-	PhoneNumberID   string
-	WhatsAppPhone   string
+	TokenWhatsApp    string
+	BaseURLGraphAPI  string
+	PhoneNumberID    string
+	WhatsAppPhone    string
+	WebhookAppSecret string
 }
 
 type DBConf struct {
@@ -83,10 +84,11 @@ func GetEnv() *Conf {
 		AppEnv:   appEnv,
 		LogLevel: logLevel,
 		WAConf: &WAConf{
-			TokenWhatsApp:   os.Getenv("TOKEN_WHATSAPP"),
-			BaseURLGraphAPI: os.Getenv("BASE_URL_GRAPH_API"),
-			PhoneNumberID:   os.Getenv("PHONE_NUMBER_ID"),
-			WhatsAppPhone:   os.Getenv("WHATSAPP_PHONE"),
+			TokenWhatsApp:    os.Getenv("TOKEN_WHATSAPP"),
+			BaseURLGraphAPI:  os.Getenv("BASE_URL_GRAPH_API"),
+			PhoneNumberID:    os.Getenv("PHONE_NUMBER_ID"),
+			WhatsAppPhone:    os.Getenv("WHATSAPP_PHONE"),
+			WebhookAppSecret: os.Getenv("WEBHOOK_APP_SECRET"),
 		},
 		EmailConf: &EmailConf{
 			SMTPPort: os.Getenv("SMTP_PORT"),

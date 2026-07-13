@@ -50,6 +50,7 @@ Base path: `/api/v1.0`
 - **Escalating block** — 5x gagal → 30m, 10x → 2j, 15x → 24j
 - **Multi-session** — kontrol jumlah session per user via `ALLOW_MULTI_SESSION` & `MAX_SESSION`
 - **CSRF Protection** — Double Submit Cookie pattern, aktif di production, no-op di development
+- **Webhook Signature Verification** — validasi HMAC SHA-256 pada `X-Hub-Signature-256` header untuk webhook WhatsApp
 
 [Detail Keamanan →](docs/06-keamanan.md)
 

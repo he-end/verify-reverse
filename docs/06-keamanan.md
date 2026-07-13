@@ -63,3 +63,25 @@ CSRF dilindungi menggunakan pola **Double Submit Cookie**.
 |--------|----------|----------|--------|
 | `refresh_token` | `true` | `Strict` | Session persistence — tidak boleh diakses JS |
 | `csrf_token` | `false` | `Strict` | CSRF protection — harus dibaca JS untuk header |
+
+## Verifikasi Signature Webhook (HMAC)
+
+Webhook WhatsApp dilindungi dengan validasi HMAC SHA-256 untuk memastikan request benar-benar berasal dari server Meta.
+
+### Cara Kerja
+
+1. Meta mengirimkan header `X-Hub-Signature-256` yang berisi `sha256=<hash>` pada setiap request webhook.
+2. Middleware `VerifyMetaWebhook` membaca seluruh body request dan menghitung HMAC SHA-256 menggunakan `WEBHOOK_APP_SECRET` sebagai kunci.
+3. Hash hasil perhitungan dibandingkan dengan hash dari header menggunakan `hmac.Equal` (constant-time comparison) untuk mencegah timing attack.
+4. Jika signature tidak cocok atau header tidak ada → `403 Forbidden`.
+
+### Implementasi
+
+- **File**: `auth/middleware/signature_hmac.go:13` — fungsi `VerifyMetaWebhook(appSecret string) gin.HandlerFunc`
+- **Route**: `auth/route.go:15` — middleware di-inject pada `POST /api/v1.0/whatsapp/`
+- **Secret**: Dibaca dari environment variable `WEBHOOK_APP_SECRET` (App Secret dari Meta Developer Dashboard).
+
+### Referensi
+
+- [Meta Webhooks — mTLS for Webhooks](https://developers.facebook.com/docs/graph-api/webhooks/getting-started#mtls-for-webhooks)
+- [Meta Webhooks — Validating Payloads](https://developers.facebook.com/docs/graph-api/webhooks/getting-started#validate-payloads)

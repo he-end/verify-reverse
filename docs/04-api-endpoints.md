@@ -15,9 +15,11 @@ Base path: `/api/v1.0`
 
 ## WhatsApp Webhook
 
-| Method | Path | Deskripsi | Auth | CSRF |
-|--------|------|-----------|------|------|
-| `POST` | `/whatsapp/` | Webhook penerima pesan WhatsApp | Tidak | Tidak |
+| Method | Path | Deskripsi | Auth | CSRF | HMAC |
+|--------|------|-----------|------|------|------|
+| `POST` | `/whatsapp/` | Webhook penerima pesan WhatsApp | Tidak | Tidak | Ya |
+
+Webhook divalidasi dengan HMAC SHA-256 menggunakan header `X-Hub-Signature-256` dari Meta. Secret dikonfigurasi via `WEBHOOK_APP_SECRET`. Lihat [dokumentasi keamanan](06-keamanan.md#verifikasi-signature-webhook-hmac) untuk detail.
 
 ## Profil User
 
