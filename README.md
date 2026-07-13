@@ -104,7 +104,8 @@ Base path: `/api/v1.0`
 | `POST` | `/wa-register` | Inisiasi registrasi via WhatsApp | Tidak |
 | `POST` | `/email-register` | Registrasi via email | Tidak |
 | `POST` | `/login` | Login (email/nomor + password) | Tidak |
-| `POST` | `/logout` | Hapus session | JWT Bearer |
+| `POST` | `/refresh` | Perbarui access token dengan refresh token cookie | Cookie |
+| `POST` | `/logout` | Hapus semua session user | JWT Bearer |
 | `POST` | `/whatsapp/` | Webhook penerima pesan WhatsApp | Tidak |
 
 ---
@@ -140,6 +141,18 @@ Base path: `/api/v1.0`
 - **Escalating block** pada `verification_attempts`: 5x gagal → blokir 30 menit, 10x → 2 jam, 15x → 24 jam.
 - **Kode verifikasi kadaluarsa** setelah 15 menit.
 - **Background cleanup** menghapus kode kadaluarsa setiap 5 menit.
+
+### Multi-Session
+
+Secara default, user dapat login dari banyak perangkat sekaligus. Perilaku ini dikontrol oleh dua variabel:
+
+| Variabel | Nilai | Perilaku |
+|----------|-------|----------|
+| `ALLOW_MULTI_SESSION=false` | — | Hanya 1 session per user — login baru menghapus semua session lama |
+| `ALLOW_MULTI_SESSION=true` | `MAX_SESSION=5` | Maksimum 5 session — login ke-6 akan menghapus session tertua |
+| `ALLOW_MULTI_SESSION=true` | `MAX_SESSION=0` | Unlimited — session tidak pernah dihapus otomatis |
+
+Session dibuat saat login (`/login`) dan token refresh (`/refresh`). Logout (`/logout`) selalu menghapus seluruh session tanpa memandang konfigurasi.
 
 ---
 
@@ -210,7 +223,14 @@ Lihat `.env.example` untuk template lengkap.
 | `BASE_URL_GRAPH_API` | Base URL Meta Graph API | — |
 | `PHONE_NUMBER_ID` | ID nomor WhatsApp bisnis (Meta) | — |
 | `WHATSAPP_PHONE` | Nomor WhatsApp format internasional tanpa `+` (untuk wa.me) | — |
+| `SMTP_HOST` | Host SMTP server | — |
+| `SMTP_PORT` | Port SMTP server | — |
+| `SMTP_USER` | Username SMTP | — |
+| `SMTP_PASS` | Password SMTP | — |
 | `JWT_ACCESS_SECRET` | Secret untuk access token | — |
 | `JWT_REFRESH_SECRET` | Secret untuk refresh token | — |
 | `JWT_ACCESS_TTL` | Durasi access token | `15m` |
 | `JWT_REFRESH_TTL` | Durasi refresh token | `168h` |
+| `REFRESH_COOKIE_NAME` | Nama cookie untuk menyimpan refresh token | `refresh_token` |
+| `ALLOW_MULTI_SESSION` | Izinkan user memiliki lebih dari satu session | `true` |
+| `MAX_SESSION` | Maksimum session per user (0 = unlimited) | `5` |
