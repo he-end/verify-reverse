@@ -28,6 +28,10 @@ func main() {
 
 	log.Info("starting server", zap.String("env", cfg.AppEnv))
 
+	if cfg.AppEnv == "dev" || cfg.AppEnv == "development" {
+		log.Warn("CSRF protection is disabled (development environment)")
+	}
+
 	container := auth.NewContainer(context.Background(), cfg)
 	router := gin.New()
 	router.RedirectTrailingSlash = false

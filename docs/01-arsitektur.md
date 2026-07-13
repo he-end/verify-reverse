@@ -11,7 +11,7 @@ main.go  →  Container (DI)  →  Handler  →  Service  →  Repository  →  
 | **Handler** | `auth/handler/auth/`, `auth/handler/webhook/`, `auth/handler/user/` | Menerima & merespons HTTP request |
 | **Service** | `auth/service/auth/`, `auth/service/` | Business logic, JWT, integrasi WhatsApp API |
 | **Repository** | `auth/repository/auth/`, `auth/repository/` | Akses database dengan Generic Repository Pattern |
-| **Middleware** | `auth/middleware/` | JWT Auth, Rate Limiting, Request ID, Panic Recovery |
+| **Middleware** | `auth/middleware/` | JWT Auth, CSRF, Rate Limiting, Request ID, Panic Recovery |
 
 ## Teknologi
 

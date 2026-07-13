@@ -71,7 +71,7 @@ func GetEnv() *Conf {
 
 	appEnv := os.Getenv("APP_ENV")
 	if appEnv == "" {
-		appEnv = "dev"
+		appEnv = "production"
 	}
 
 	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))

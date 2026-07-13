@@ -30,6 +30,7 @@ Base path: `/api/v1.0`
 
 | Method | Path | Deskripsi | Auth |
 |--------|------|-----------|------|
+| `GET`  | `/csrf-token` | Ambil CSRF token | Tidak |
 | `POST` | `/wa-register` | Registrasi via WhatsApp | Tidak |
 | `POST` | `/email-register` | Registrasi via email | Tidak |
 | `POST` | `/login` | Login | Tidak |
@@ -48,6 +49,7 @@ Base path: `/api/v1.0`
 - **Rate limiting** — 5 req/menit per IP (registrasi), 3 pesan/30 detik per sender (webhook)
 - **Escalating block** — 5x gagal → 30m, 10x → 2j, 15x → 24j
 - **Multi-session** — kontrol jumlah session per user via `ALLOW_MULTI_SESSION` & `MAX_SESSION`
+- **CSRF Protection** — Double Submit Cookie pattern, aktif di production, no-op di development
 
 [Detail Keamanan →](docs/06-keamanan.md)
 

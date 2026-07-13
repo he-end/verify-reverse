@@ -45,7 +45,7 @@ Lihat `.env.example` untuk template lengkap.
 
 | Variabel | Deskripsi | Default |
 |----------|-----------|---------|
-| `APP_ENV` | Environment (`dev`/`prod`) | `dev` |
-| `LOG_LEVEL` | Level log (`debug`/`info`/`warn`/`error`) | `debug` |
+| `APP_ENV` | Environment aplikasi. Mempengaruhi CSRF middleware dan format log. `production` (default) mengaktifkan CSRF dan log JSON ke file. `dev`/`development` menonaktifkan CSRF dan log dalam format console. | `production` |
+| `LOG_LEVEL` | Level log (`debug`/`info`/`warn`/`error`) | `info` |
 | `ALLOW_MULTI_SESSION` | Izinkan user memiliki lebih dari satu session | `true` |
 | `MAX_SESSION` | Maksimum session per user (0 = unlimited) | `5` |

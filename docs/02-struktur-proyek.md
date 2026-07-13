@@ -17,7 +17,7 @@ reverse-auth/
 │   │   └── migrations/              # File migrasi SQL
 │   ├── service/                     # WhatsApp API client, QR, validator
 │   │   └── auth/                    # Auth service + JWT service
-│   ├── middleware/                  # JWT auth, rate limiter, request ID
+│   ├── middleware/                  # JWT auth, CSRF, rate limiter, request ID
 │   ├── log/                         # Zap logger + context injection
 │   ├── response/                    # JSON response helpers
 │   └── testhelper/                  # Test DB setup + Docker orchestration

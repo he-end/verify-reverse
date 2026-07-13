@@ -26,3 +26,40 @@ Secara default, user dapat login dari banyak perangkat sekaligus. Perilaku ini d
 | `ALLOW_MULTI_SESSION=true` | `MAX_SESSION=0` | Unlimited — session tidak pernah dihapus otomatis |
 
 Session dibuat saat login (`/login`) dan token refresh (`/refresh`). Logout (`/logout`) selalu menghapus seluruh session tanpa memandang konfigurasi.
+
+## CSRF Protection
+
+CSRF dilindungi menggunakan pola **Double Submit Cookie**.
+
+### Cara Kerja
+
+1. Client memanggil `GET /api/v1.0/csrf-token` sebelum request state-changing pertama.
+2. Server menghasilkan token 32-byte random (64 karakter hex) via `crypto/rand`.
+3. Server mengatur cookie `csrf_token` dengan atribut:
+   - `Path=/api/v1.0` — hanya dikirim ke path API
+   - `HttpOnly=false` — dapat dibaca JavaScript untuk disertakan sebagai header
+   - `SameSite=Strict` — defense-in-depth terhadap CSRF
+   - `Secure` — hanya dikirim via HTTPS (jika TLS aktif)
+   - `MaxAge=86400` — berlaku 24 jam
+4. Client membaca cookie dan menyertakan header `X-CSRF-Token: <token>` pada setiap request `POST`/`PUT`/`PATCH`/`DELETE`.
+5. Server membandingkan cookie `csrf_token` dengan header `X-CSRF-Token` — jika tidak cocok → `403 Forbidden`.
+
+### Cakupan
+
+| Environment | CSRF |
+|-------------|------|
+| `production` (default) | Middleware aktif — semua mutating request divalidasi |
+| `dev` / `development` | Middleware no-op — startup log: *"CSRF protection is disabled"* |
+
+### Pengecualian
+
+- **Method**: `GET`/`HEAD`/`OPTIONS`/`TRACE` tidak divalidasi (idempoten/safe).
+- **Endpoint webhook** (`POST /whatsapp/`): berada di luar grup CSRF karena dipanggil oleh server WhatsApp (bukan browser).
+- **Endpoint CSRF token** (`GET /csrf-token`): berada di luar grup CSRF agar token dapat diambil sebelum middleware diterapkan.
+
+### Perbandingan Cookie
+
+| Cookie | HttpOnly | SameSite | Tujuan |
+|--------|----------|----------|--------|
+| `refresh_token` | `true` | `Strict` | Session persistence — tidak boleh diakses JS |
+| `csrf_token` | `false` | `Strict` | CSRF protection — harus dibaca JS untuk header |

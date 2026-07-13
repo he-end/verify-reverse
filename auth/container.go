@@ -25,6 +25,7 @@ type Container struct {
 	WaSvc   *service.WaService
 	JwtSvc  *authsvc.JWTService
 	Val     *service.Validator
+	cfg     *conf.Conf
 }
 
 func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
@@ -60,5 +61,6 @@ func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
 		WaSvc:   wa,
 		JwtSvc:  jwtSvc,
 		Val:     val,
+		cfg:     cfg,
 	}
 }

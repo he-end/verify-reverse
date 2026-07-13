@@ -10,19 +10,23 @@ import (
 
 func (c *Container) RegisterRoutes(r *gin.Engine) {
 	api := r.Group("/api/v1.0")
-	{
-		// api.GET("/whatsapp", c.Webhook.WhatsAppVerify) // this is Endpoint used for Verify Add URL Webhook in Whatsapp
-		api.POST("/whatsapp/", c.Webhook.WhatsAppHandler)
-		api.POST("/wa-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaWA)
-		api.POST("/email-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaEmail)
-		api.POST("/login", c.Auth.Login)
-		api.POST("/refresh", c.Auth.Refresh)
 
-		protected := api.Group("")
+	api.GET("/csrf-token", middleware.CSRFTokenHandler(c.cfg))
+	api.POST("/whatsapp/", c.Webhook.WhatsAppHandler)
+
+	csrf := api.Group("")
+	csrf.Use(middleware.CSRFMiddleware(c.cfg))
+	{
+		csrf.POST("/wa-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaWA)
+		csrf.POST("/email-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaEmail)
+		csrf.POST("/login", c.Auth.Login)
+		csrf.POST("/refresh", c.Auth.Refresh)
+
+		protected := csrf.Group("")
 		protected.Use(middleware.AuthMiddleware(c.JwtSvc))
 		{
-			protected.POST("/logout", c.Auth.Logout)
 			protected.GET("/me", c.User.GetProfile)
+			protected.POST("/logout", c.Auth.Logout)
 			protected.PATCH("/me", c.User.UpdateProfile)
 			protected.PUT("/me/password", c.User.ChangePassword)
 			protected.PUT("/me/wa-number", c.User.ChangeWANumber)
