@@ -35,15 +35,14 @@ type refreshResponse struct {
 }
 
 const (
-	refreshCookieName     = "refresh_token"
 	refreshCookiePath     = "/api/v1.0"
 	refreshCookieSameSite = http.SameSiteStrictMode
 )
 
-func setRefreshTokenCookie(c *gin.Context, token string, ttl time.Duration) {
+func (h *Handler) setRefreshTokenCookie(c *gin.Context, token string, ttl time.Duration) {
 	secure := c.Request.TLS != nil
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     refreshCookieName,
+		Name:     h.refreshCookieName,
 		Value:    token,
 		Path:     refreshCookiePath,
 		MaxAge:   int(ttl.Seconds()),
@@ -53,10 +52,10 @@ func setRefreshTokenCookie(c *gin.Context, token string, ttl time.Duration) {
 	})
 }
 
-func clearRefreshTokenCookie(c *gin.Context) {
+func (h *Handler) clearRefreshTokenCookie(c *gin.Context) {
 	secure := c.Request.TLS != nil
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     refreshCookieName,
+		Name:     h.refreshCookieName,
 		Value:    "",
 		Path:     refreshCookiePath,
 		MaxAge:   -1,
@@ -103,6 +102,8 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	h.setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
+
 	accessExpiresAt := time.Now().Add(h.jwtSvc.AccessTTL())
 
 	response.OK(c, loginResponse{
@@ -110,7 +111,6 @@ func (h *Handler) Login(c *gin.Context) {
 		AccessToken: tokens.AccessToken,
 		ExpiresAt:   accessExpiresAt,
 	})
-	setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
 }
 
 func (h *Handler) Logout(c *gin.Context) {
@@ -131,7 +131,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	response.OK(c, gin.H{"message": "logged out successfully"})
-	clearRefreshTokenCookie(c)
+	h.clearRefreshTokenCookie(c)
 }
 
 func (h *Handler) Refresh(c *gin.Context) {
@@ -139,7 +139,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 	defer cancel()
 	logger := log.CtxLogger(ctx)
 
-	refreshToken, err := c.Cookie(refreshCookieName)
+	refreshToken, err := c.Cookie(h.refreshCookieName)
 	if err != nil {
 		response.Unauthorized(c, "refresh token is required")
 		return
@@ -165,5 +165,5 @@ func (h *Handler) Refresh(c *gin.Context) {
 		AccessToken: tokens.AccessToken,
 		ExpiresAt:   accessExpiresAt,
 	})
-	setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
+	h.setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
 }

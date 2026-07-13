@@ -15,10 +15,11 @@ import (
 )
 
 type Handler struct {
-	wa      *service.WaService
-	val     *service.Validator
-	authSvc *authsvc.AuthService
-	jwtSvc  *authsvc.JWTService
+	wa                *service.WaService
+	val               *service.Validator
+	authSvc           *authsvc.AuthService
+	jwtSvc            *authsvc.JWTService
+	refreshCookieName string
 }
 
 func New(
@@ -26,8 +27,9 @@ func New(
 	val *service.Validator,
 	authSvc *authsvc.AuthService,
 	jwtSvc *authsvc.JWTService,
+	refreshCookieName string,
 ) *Handler {
-	h := &Handler{wa: wa, val: val, authSvc: authSvc, jwtSvc: jwtSvc}
+	h := &Handler{wa: wa, val: val, authSvc: authSvc, jwtSvc: jwtSvc, refreshCookieName: refreshCookieName}
 	h.registerValidator(val)
 	return h
 }

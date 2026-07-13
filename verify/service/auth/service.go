@@ -18,18 +18,22 @@ import (
 )
 
 type AuthService struct {
-	repo        *auth.AuthRepository
-	sessionRepo *auth.SessionRepository
-	verifyRepo  *auth.VerificationRepository
-	jwt         *JWTService
+	repo              *auth.AuthRepository
+	sessionRepo       *auth.SessionRepository
+	verifyRepo        *auth.VerificationRepository
+	jwt               *JWTService
+	allowMultiSession bool
+	maxSession        int
 }
 
-func NewAuthService(repo *auth.AuthRepository, sessionRepo *auth.SessionRepository, verifyRepo *auth.VerificationRepository, jwt *JWTService) *AuthService {
+func NewAuthService(repo *auth.AuthRepository, sessionRepo *auth.SessionRepository, verifyRepo *auth.VerificationRepository, jwt *JWTService, allowMultiSession bool, maxSession int) *AuthService {
 	return &AuthService{
-		repo:        repo,
-		sessionRepo: sessionRepo,
-		verifyRepo:  verifyRepo,
-		jwt:         jwt,
+		repo:              repo,
+		sessionRepo:       sessionRepo,
+		verifyRepo:        verifyRepo,
+		jwt:               jwt,
+		allowMultiSession: allowMultiSession,
+		maxSession:        maxSession,
 	}
 }
 
@@ -148,8 +152,20 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*auth.User, 
 		return nil, nil, fmt.Errorf("generate token pair: %w", err)
 	}
 
-	if err := s.sessionRepo.DeleteByUserID(ctx, user.ID); err != nil {
-		return nil, nil, fmt.Errorf("delete old sessions: %w", err)
+	if !s.allowMultiSession {
+		if err := s.sessionRepo.DeleteByUserID(ctx, user.ID); err != nil {
+			return nil, nil, fmt.Errorf("delete old sessions: %w", err)
+		}
+	} else if s.maxSession > 0 {
+		count, err := s.sessionRepo.CountByUserID(ctx, user.ID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("count sessions by user: %w", err)
+		}
+		if count >= s.maxSession {
+			if err := s.sessionRepo.DeleteOldestByUserID(ctx, user.ID); err != nil {
+				return nil, nil, fmt.Errorf("delete oldest session: %w", err)
+			}
+		}
 	}
 
 	sessionID, err := uuid.NewV7()

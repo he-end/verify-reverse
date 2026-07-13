@@ -3,6 +3,7 @@ package conf
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,11 +12,17 @@ import (
 	"github.com/he-end/verify-reverse/verify/log"
 )
 
+type SessionConf struct {
+	AllowMultiSession bool
+	MaxSession        int
+}
+
 type Conf struct {
 	*WAConf
 	*EmailConf
 	DBConf
 	JWTConf
+	*SessionConf
 	AppEnv   string
 	LogLevel string
 }
@@ -49,10 +56,11 @@ func (d *DBConf) DSN() string {
 }
 
 type JWTConf struct {
-	JWTAccessSecret  string
-	JWTRefreshSecret string
-	JWTAccessTTL     time.Duration
-	JWTRefreshTTL    time.Duration
+	JWTAccessSecret   string
+	JWTRefreshSecret  string
+	JWTAccessTTL      time.Duration
+	JWTRefreshTTL     time.Duration
+	RefreshCookieName string
 }
 
 func GetEnv() *Conf {
@@ -95,10 +103,15 @@ func GetEnv() *Conf {
 			DBSSLMode:  os.Getenv("DB_SSLMODE"),
 		},
 		JWTConf: JWTConf{
-			JWTAccessSecret:  os.Getenv("JWT_ACCESS_SECRET"),
-			JWTRefreshSecret: os.Getenv("JWT_REFRESH_SECRET"),
-			JWTAccessTTL:     parseDuration(os.Getenv("JWT_ACCESS_TTL"), 15*time.Minute),
-			JWTRefreshTTL:    parseDuration(os.Getenv("JWT_REFRESH_TTL"), 168*time.Hour),
+			JWTAccessSecret:   os.Getenv("JWT_ACCESS_SECRET"),
+			JWTRefreshSecret:  os.Getenv("JWT_REFRESH_SECRET"),
+			JWTAccessTTL:      parseDuration(os.Getenv("JWT_ACCESS_TTL"), 15*time.Minute),
+			JWTRefreshTTL:     parseDuration(os.Getenv("JWT_REFRESH_TTL"), 168*time.Hour),
+			RefreshCookieName: parseString(os.Getenv("REFRESH_COOKIE_NAME"), "refresh_token"),
+		},
+		SessionConf: &SessionConf{
+			AllowMultiSession: parseBool(os.Getenv("ALLOW_MULTI_SESSION"), true),
+			MaxSession:        parseMaxSession(os.Getenv("MAX_SESSION")),
 		},
 	}
 	return &conf
@@ -113,4 +126,34 @@ func parseDuration(s string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return d
+}
+
+func parseString(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
+}
+
+func parseBool(s string, fallback bool) bool {
+	if s == "" {
+		return fallback
+	}
+	switch strings.ToLower(s) {
+	case "true", "1", "yes":
+		return true
+	default:
+		return fallback
+	}
+}
+
+func parseMaxSession(s string) int {
+	if s == "" {
+		return 5
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 0 {
+		return 5
+	}
+	return n
 }

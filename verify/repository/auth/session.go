@@ -59,3 +59,21 @@ func (r *SessionRepository) DeleteExpired(ctx context.Context) (int64, error) {
 	n, _ := res.RowsAffected()
 	return n, nil
 }
+
+func (r *SessionRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int, error) {
+	count, err := r.db.NewSelect().Model((*Session)(nil)).Where("user_id = ?", userID).Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count sessions by user: %w", err)
+	}
+	return count, nil
+}
+
+func (r *SessionRepository) DeleteOldestByUserID(ctx context.Context, userID uuid.UUID) error {
+	_, err := r.db.NewDelete().Model((*Session)(nil)).
+		Where("id = (SELECT id FROM sessions WHERE user_id = ? ORDER BY created_at ASC LIMIT 1)", userID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("delete oldest session: %w", err)
+	}
+	return nil
+}

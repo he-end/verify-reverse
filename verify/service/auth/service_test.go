@@ -37,7 +37,7 @@ func newServiceTestSetup(t *testing.T) *serviceTestSetup {
 	db := testhelper.NewTestDB(t)
 	authRepo := auth.NewAuthRepository(db)
 	verifyRepo := auth.NewVerificationRepository(db)
-	svc := authsvc.NewAuthService(authRepo, nil, verifyRepo, nil)
+	svc := authsvc.NewAuthService(authRepo, nil, verifyRepo, nil, true, 5)
 	t.Cleanup(func() {
 		testhelper.TruncateAll(context.Background(), db)
 	})

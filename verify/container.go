@@ -41,7 +41,7 @@ func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
 	authRepo := authrepo.NewAuthRepository(db)
 	sessionRepo := authrepo.NewSessionRepository(db)
 	verifyRepo := authrepo.NewVerificationRepository(db)
-	authService := authsvc.NewAuthService(authRepo, sessionRepo, verifyRepo, jwtSvc)
+	authService := authsvc.NewAuthService(authRepo, sessionRepo, verifyRepo, jwtSvc, cfg.AllowMultiSession, cfg.MaxSession)
 
 	attemptRepo := authrepo.NewAttemptRepository(db)
 	rateLimiter := service.NewRateLimiter(ctx)
@@ -49,7 +49,7 @@ func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
 	wa.StartExpiredCleanup(ctx, verifyRepo, 5*time.Minute)
 
 	return &Container{
-		Auth:    auth.New(wa, val, authService, jwtSvc),
+		Auth:    auth.New(wa, val, authService, jwtSvc, cfg.RefreshCookieName),
 		Webhook: webhook.New(wa, val, authService, attemptRepo, rateLimiter),
 		WaSvc:   wa,
 		JwtSvc:  jwtSvc,
