@@ -161,6 +161,11 @@ func (s *WaService) CreateLinkRegister(codeRegister string) string {
 	return fmt.Sprintf("https://wa.me/%s?text=%s", *s.conf.PhoneNumber, msg)
 }
 
+func (s *WaService) CreateLinkChange(code string) string {
+	msg := url.QueryEscape("CHANGE:" + code)
+	return fmt.Sprintf("https://wa.me/%s?text=%s", *s.conf.PhoneNumber, msg)
+}
+
 func (s *WaService) SendMessage(ctx context.Context, to, text string) error {
 	path := fmt.Sprintf("/%v/messages", *s.conf.PhoneNumberID)
 	url, err := s.conf.buildURL(&path)

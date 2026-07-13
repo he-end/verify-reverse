@@ -22,6 +22,10 @@ func (c *Container) RegisterRoutes(r *gin.Engine) {
 		protected.Use(middleware.AuthMiddleware(c.JwtSvc))
 		{
 			protected.POST("/logout", c.Auth.Logout)
+			protected.GET("/me", c.User.GetProfile)
+			protected.PATCH("/me", c.User.UpdateProfile)
+			protected.PUT("/me/password", c.User.ChangePassword)
+			protected.PUT("/me/wa-number", c.User.ChangeWANumber)
 		}
 	}
 }

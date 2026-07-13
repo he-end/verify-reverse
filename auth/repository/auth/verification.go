@@ -23,6 +23,7 @@ type VerificationCode struct {
 	UsedAt        *time.Time `bun:"used_at"`
 	UserID        *uuid.UUID `bun:"user_id"`
 	IsPhantom     bool       `bun:"is_phantom,notnull,default:false"`
+	Purpose       string     `bun:"purpose,notnull,default:'register'"`
 }
 
 type VerificationRepository struct {
@@ -73,6 +74,23 @@ func (r *VerificationRepository) DeleteExpired(ctx context.Context) (int64, erro
 	}
 	n, _ := res.RowsAffected()
 	return n, nil
+}
+
+func (r *VerificationRepository) FindByCodeAndContactAndPurpose(ctx context.Context, code, contact, purpose string) (*VerificationCode, error) {
+	var vc VerificationCode
+	err := r.db.NewSelect().Model(&vc).
+		Where("vc.code = ?", code).
+		Where("vc.contact = ?", contact).
+		Where("vc.purpose = ?", purpose).
+		Where("vc.used_at IS NULL").
+		Scan(ctx)
+	if err != nil {
+		return nil, repository.MapError(err)
+	}
+	if vc.ExpiresAt.Before(time.Now()) {
+		return nil, repository.ErrVerificationExpired
+	}
+	return &vc, nil
 }
 
 func (r *VerificationRepository) ExistsPending(ctx context.Context, contact, contactType string) (bool, error) {

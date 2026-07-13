@@ -46,6 +46,7 @@ type webhookBody struct {
 }
 
 var verifyCodePattern = regexp.MustCompile(`^VERIFY:(VRFY-[A-Z0-9]{8})$`)
+var changeWACodePattern = regexp.MustCompile(`^CHANGE:(CHGWA-[A-Z0-9]{8})$`)
 
 func (h *Handler) WhatsAppVerify(c *gin.Context) {
 	challenge := c.Query("hub.challenge")
@@ -87,16 +88,41 @@ func (h *Handler) WhatsAppHandler(c *gin.Context) {
 				defer cancel()
 				logger := log.CtxLogger(ctx)
 
-				blocked, err := h.attemptRepo.IsBlocked(ctx, msg.From, "wa")
-				if err != nil {
-					logger.Warn("attempt check failed", zap.String("from", msg.From), zap.Error(err))
-				} else if blocked {
+			blocked, err := h.attemptRepo.IsBlocked(ctx, msg.From, "wa")
+			if err != nil {
+				logger.Warn("attempt check failed", zap.String("from", msg.From), zap.Error(err))
+			} else if blocked {
+				cancel()
+				c.Status(http.StatusOK)
+				return
+			}
+
+			changeMatches := changeWACodePattern.FindStringSubmatch(msg.Text.Body)
+			if len(changeMatches) == 2 {
+				code := changeMatches[1]
+
+				if err := h.userSvc.CompleteWANumberChange(ctx, code, msg.From); err != nil {
+					logger.Error("WA number change failed", zap.Error(err))
+					if recErr := h.attemptRepo.RecordFailed(ctx, msg.From, "wa"); recErr != nil {
+						logger.Error("record failed attempt", zap.String("from", msg.From), zap.Error(recErr))
+					}
 					cancel()
 					c.Status(http.StatusOK)
 					return
 				}
 
-				verified, err := h.authSvc.IsAlreadyVerified(ctx, msg.From)
+				if err := h.attemptRepo.ResetAttempts(ctx, msg.From, "wa"); err != nil {
+					logger.Warn("reset attempts failed", zap.String("from", msg.From), zap.Error(err))
+				}
+
+				h.wa.SendMessage(ctx, msg.From, "Nomor WhatsApp berhasil diubah.")
+				logger.Info("user WA number changed", zap.String("from", msg.From))
+				cancel()
+				c.Status(http.StatusOK)
+				return
+			}
+
+			verified, err := h.authSvc.IsAlreadyVerified(ctx, msg.From)
 				if err != nil {
 					logger.Warn("verified check failed", zap.String("from", msg.From), zap.Error(err))
 				} else if verified {

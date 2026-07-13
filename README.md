@@ -30,10 +30,10 @@ main.go  →  Container (DI)  →  Handler  →  Service  →  Repository  →  
 
 | Layer | Paket | Tanggung Jawab |
 |-------|-------|----------------|
-| **Handler** | `verify/handler/auth/`, `verify/handler/webhook/` | Menerima & merespons HTTP request |
-| **Service** | `verify/service/auth/`, `verify/service/` | Business logic, JWT, integrasi WhatsApp API |
-| **Repository** | `verify/repository/auth/`, `verify/repository/` | Akses database dengan Generic Repository Pattern |
-| **Middleware** | `verify/middleware/` | JWT Auth, Rate Limiting, Request ID, Panic Recovery |
+| **Handler** | `auth/handler/auth/`, `auth/handler/webhook/` | Menerima & merespons HTTP request |
+| **Service** | `auth/service/auth/`, `auth/service/` | Business logic, JWT, integrasi WhatsApp API |
+| **Repository** | `auth/repository/auth/`, `auth/repository/` | Akses database dengan Generic Repository Pattern |
+| **Middleware** | `auth/middleware/` | JWT Auth, Rate Limiting, Request ID, Panic Recovery |
 
 ---
 
@@ -57,10 +57,10 @@ main.go  →  Container (DI)  →  Handler  →  Service  →  Repository  →  
 ## Struktur Proyek
 
 ```
-reverse-verify/
+reverse-auth/
 ├── main.go                          # Entry point server HTTP
 ├── cmd/migrate/main.go              # Runner migrasi database
-├── verify/
+├── auth/
 │   ├── container.go                 # Dependency Injection container
 │   ├── route.go                     # Definisi HTTP routes
 │   ├── conf/config.go               # Konfigurasi dari environment
@@ -189,7 +189,7 @@ go run .
 ./scripts/test.sh
 
 # Atau manual
-go test -count=1 -timeout 60s ./verify/...
+go test -count=1 -timeout 60s ./auth/...
 
 # Lint check
 ./scripts/check-errors.sh

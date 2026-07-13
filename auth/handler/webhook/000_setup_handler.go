@@ -4,6 +4,7 @@ import (
 	"github.com/he-end/verify-reverse/auth/repository/auth"
 	"github.com/he-end/verify-reverse/auth/service"
 	authsvc "github.com/he-end/verify-reverse/auth/service/auth"
+	usersvc "github.com/he-end/verify-reverse/auth/service/user"
 )
 
 type Handler struct {
@@ -12,6 +13,7 @@ type Handler struct {
 	authSvc     *authsvc.AuthService
 	attemptRepo *auth.AttemptRepository
 	rateLimiter *service.RateLimiter
+	userSvc     *usersvc.UserService
 }
 
 func New(
@@ -20,6 +22,7 @@ func New(
 	authSvc *authsvc.AuthService,
 	attemptRepo *auth.AttemptRepository,
 	rateLimiter *service.RateLimiter,
+	userSvc *usersvc.UserService,
 ) *Handler {
 	return &Handler{
 		wa:          wa,
@@ -27,5 +30,6 @@ func New(
 		authSvc:     authSvc,
 		attemptRepo: attemptRepo,
 		rateLimiter: rateLimiter,
+		userSvc:     userSvc,
 	}
 }

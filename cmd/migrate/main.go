@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/he-end/verify-reverse/verify/repository"
+	"github.com/he-end/verify-reverse/auth/repository"
 )
 
 func main() {

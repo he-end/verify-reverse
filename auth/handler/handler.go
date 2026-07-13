@@ -14,3 +14,10 @@ type WhatsAppWebhookHandler interface {
 	WhatsAppVerify(c *gin.Context)
 	WhatsAppHandler(c *gin.Context)
 }
+
+type UserHandler interface {
+	GetProfile(c *gin.Context)
+	UpdateProfile(c *gin.Context)
+	ChangePassword(c *gin.Context)
+	ChangeWANumber(c *gin.Context)
+}

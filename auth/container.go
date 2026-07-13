@@ -7,17 +7,20 @@ import (
 	"github.com/he-end/verify-reverse/auth/conf"
 	"github.com/he-end/verify-reverse/auth/handler"
 	"github.com/he-end/verify-reverse/auth/handler/auth"
+	"github.com/he-end/verify-reverse/auth/handler/user"
 	"github.com/he-end/verify-reverse/auth/handler/webhook"
 	"github.com/he-end/verify-reverse/auth/log"
 	"github.com/he-end/verify-reverse/auth/repository"
 	authrepo "github.com/he-end/verify-reverse/auth/repository/auth"
 	"github.com/he-end/verify-reverse/auth/service"
 	authsvc "github.com/he-end/verify-reverse/auth/service/auth"
+	usersvc "github.com/he-end/verify-reverse/auth/service/user"
 	"go.uber.org/zap"
 )
 
 type Container struct {
 	Auth    handler.AuthHandler
+	User    handler.UserHandler
 	Webhook handler.WhatsAppWebhookHandler
 	WaSvc   *service.WaService
 	JwtSvc  *authsvc.JWTService
@@ -46,11 +49,14 @@ func NewContainer(ctx context.Context, cfg *conf.Conf) *Container {
 	attemptRepo := authrepo.NewAttemptRepository(db)
 	rateLimiter := service.NewRateLimiter(ctx)
 
+	userSvc := usersvc.NewUserService(authRepo, sessionRepo, verifyRepo)
+
 	wa.StartExpiredCleanup(ctx, verifyRepo, 5*time.Minute)
 
 	return &Container{
 		Auth:    auth.New(wa, val, authService, jwtSvc, cfg.RefreshCookieName),
-		Webhook: webhook.New(wa, val, authService, attemptRepo, rateLimiter),
+		User:    user.New(wa, val, userSvc),
+		Webhook: webhook.New(wa, val, authService, attemptRepo, rateLimiter, userSvc),
 		WaSvc:   wa,
 		JwtSvc:  jwtSvc,
 		Val:     val,

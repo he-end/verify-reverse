@@ -1,0 +1,1 @@
+ALTER TABLE verification_codes ADD COLUMN IF NOT EXISTS purpose VARCHAR(20) NOT NULL DEFAULT 'register';
