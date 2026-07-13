@@ -17,7 +17,7 @@ docker compose --project-directory "$ROOT_DIR" up -d --wait
 
 echo ""
 echo "Running tests..."
-go test -count=1 -timeout 60s ./verify/... "$@"
+go test -count=1 -timeout 60s ./auth/... "$@"
 
 echo ""
 echo "All tests passed"

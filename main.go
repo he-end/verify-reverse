@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/he-end/verify-reverse/verify"
-	"github.com/he-end/verify-reverse/verify/conf"
-	"github.com/he-end/verify-reverse/verify/log"
-	"github.com/he-end/verify-reverse/verify/middleware"
+	"github.com/he-end/verify-reverse/auth"
+	"github.com/he-end/verify-reverse/auth/conf"
+	"github.com/he-end/verify-reverse/auth/log"
+	"github.com/he-end/verify-reverse/auth/middleware"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 
 	log.Info("starting server", zap.String("env", cfg.AppEnv))
 
-	container := verify.NewContainer(context.Background(), cfg)
+	container := auth.NewContainer(context.Background(), cfg)
 	router := gin.New()
 	router.RedirectTrailingSlash = false
 	router.Use(middleware.RequestIDMiddleware())
