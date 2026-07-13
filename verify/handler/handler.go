@@ -7,6 +7,7 @@ type AuthHandler interface {
 	RegisterViaEmail(c *gin.Context)
 	Login(c *gin.Context)
 	Logout(c *gin.Context)
+	Refresh(c *gin.Context)
 }
 
 type WhatsAppWebhookHandler interface {

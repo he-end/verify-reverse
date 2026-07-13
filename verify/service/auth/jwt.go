@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,6 +30,14 @@ func NewJWTService(cfg conf.JWTConf) *JWTService {
 		accessTTL:     cfg.JWTAccessTTL,
 		refreshTTL:    cfg.JWTRefreshTTL,
 	}
+}
+
+func (j *JWTService) AccessTTL() time.Duration {
+	return j.accessTTL
+}
+
+func (j *JWTService) RefreshTTL() time.Duration {
+	return j.refreshTTL
 }
 
 type TokenPair struct {
@@ -94,7 +103,7 @@ func (j *JWTService) ValidateAccessToken(ctx context.Context, tokenString string
 		return j.accessSecret, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", repository.ErrTokenInvalid, err)
+		return nil, fmt.Errorf("%w: %w", repository.ErrTokenInvalid, err)
 	}
 
 	claims, ok := token.Claims.(*Claims)
@@ -115,6 +124,12 @@ func (j *JWTService) RefreshAccessToken(ctx context.Context, refreshToken, curre
 }
 
 func isTokenExpiredError(err error) bool {
+	for err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return true
+		}
+		err = errors.Unwrap(err)
+	}
 	return false
 }
 

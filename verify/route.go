@@ -16,6 +16,7 @@ func (c *Container) RegisterRoutes(r *gin.Engine) {
 		api.POST("/wa-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaWA)
 		api.POST("/email-register", middleware.RateLimitRegister(5, time.Minute), c.Auth.RegisterViaEmail)
 		api.POST("/login", c.Auth.Login)
+		api.POST("/refresh", c.Auth.Refresh)
 
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(c.JwtSvc))

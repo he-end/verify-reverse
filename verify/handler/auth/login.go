@@ -23,9 +23,47 @@ type LoginReqBody struct {
 	Pwd    string  `json:"pwd"`
 }
 
-type authResponse struct {
-	User  authrepo.UserResponse `json:"user"`
-	Token authsvc.TokenPair     `json:"token"`
+type loginResponse struct {
+	User        authrepo.UserResponse `json:"user"`
+	AccessToken string                `json:"access_token"`
+	ExpiresAt   time.Time             `json:"expires_at"`
+}
+
+type refreshResponse struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+const (
+	refreshCookieName     = "refresh_token"
+	refreshCookiePath     = "/api/v1.0"
+	refreshCookieSameSite = http.SameSiteStrictMode
+)
+
+func setRefreshTokenCookie(c *gin.Context, token string, ttl time.Duration) {
+	secure := c.Request.TLS != nil
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    token,
+		Path:     refreshCookiePath,
+		MaxAge:   int(ttl.Seconds()),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: refreshCookieSameSite,
+	})
+}
+
+func clearRefreshTokenCookie(c *gin.Context) {
+	secure := c.Request.TLS != nil
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    "",
+		Path:     refreshCookiePath,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: refreshCookieSameSite,
+	})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -65,10 +103,14 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, authResponse{
-		User:  user.ToResponse(),
-		Token: *tokens,
+	accessExpiresAt := time.Now().Add(h.jwtSvc.AccessTTL())
+
+	response.OK(c, loginResponse{
+		User:        user.ToResponse(),
+		AccessToken: tokens.AccessToken,
+		ExpiresAt:   accessExpiresAt,
 	})
+	setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
 }
 
 func (h *Handler) Logout(c *gin.Context) {
@@ -89,4 +131,39 @@ func (h *Handler) Logout(c *gin.Context) {
 	}
 
 	response.OK(c, gin.H{"message": "logged out successfully"})
+	clearRefreshTokenCookie(c)
+}
+
+func (h *Handler) Refresh(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+	logger := log.CtxLogger(ctx)
+
+	refreshToken, err := c.Cookie(refreshCookieName)
+	if err != nil {
+		response.Unauthorized(c, "refresh token is required")
+		return
+	}
+
+	_, tokens, err := h.authSvc.RefreshTokens(ctx, refreshToken)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrNotFound):
+			response.Unauthorized(c, "invalid refresh token")
+		case errors.Is(err, repository.ErrTokenExpired):
+			response.Unauthorized(c, "refresh token has expired")
+		default:
+			logger.Error("refresh token", zap.Error(err))
+			response.InternalError(c, "something went wrong")
+		}
+		return
+	}
+
+	accessExpiresAt := time.Now().Add(h.jwtSvc.AccessTTL())
+
+	response.OK(c, refreshResponse{
+		AccessToken: tokens.AccessToken,
+		ExpiresAt:   accessExpiresAt,
+	})
+	setRefreshTokenCookie(c, tokens.RefreshToken, h.jwtSvc.RefreshTTL())
 }

@@ -302,3 +302,50 @@ func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
 	}
 	return nil
 }
+
+func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string) (*auth.User, *TokenPair, error) {
+	session, err := s.sessionRepo.FindByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, nil, fmt.Errorf("find session: %w", err)
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		if err := s.sessionRepo.Delete(ctx, session.ID); err != nil {
+			return nil, nil, fmt.Errorf("delete expired session: %w", err)
+		}
+		return nil, nil, repository.ErrTokenExpired
+	}
+
+	user, err := s.repo.FindByID(ctx, session.UserID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("find user: %w", err)
+	}
+
+	userHash := UserHash(user.PasswordHash)
+	tokens, err := s.jwt.GenerateTokenPair(ctx, user.ID, userHash)
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate token pair: %w", err)
+	}
+
+	if err := s.sessionRepo.Delete(ctx, session.ID); err != nil {
+		return nil, nil, fmt.Errorf("delete old session: %w", err)
+	}
+
+	newSessionID, err := uuid.NewV7()
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate session ID: %w", err)
+	}
+
+	newSession := &auth.Session{
+		ID:            newSessionID,
+		UserID:        user.ID,
+		RefreshToken:  tokens.RefreshToken,
+		AccessTokenID: uuid.New().String(),
+		ExpiresAt:     tokens.ExpiresAt,
+	}
+	if err := s.sessionRepo.Create(ctx, newSession); err != nil {
+		return nil, nil, fmt.Errorf("create session: %w", err)
+	}
+
+	return user, tokens, nil
+}
