@@ -4,94 +4,23 @@
 
 ---
 
-## Konsep Dasar
+## Ringkasan
 
-Pada metode verifikasi konvensional, setelah user mendaftar, server mengirimkan kode verifikasi ke nomor/email user untuk dibuktikan kepemilikannya.
+Reverse Verify adalah layanan autentikasi yang membalik alur verifikasi tradisional: alih-alih server mengirim kode ke user, server menunggu user mengirim kode kembali — membuktikan kepemilikan kontak tanpa server perlu mengirim apa pun.
 
-**Reverse Verify membalik alur tersebut.** Alih-alih server yang mengirim kode, server justru menunggu kiriman kode dari nomor/email yang didaftarkan. Proses ini membuktikan bahwa user benar-benar memiliki akses ke kontak tersebut, tanpa server perlu mengirimkan apa pun.
-
-### Ilustrasi Alur
-
-```
-Registrasi Konvensional:
-  User → Daftar → Server kirim Kode ke User → User masukkan Kode → Verifikasi
-
-Reverse Verify:
-  User → Daftar → Server berikan deep link berisi Kode → Klien generate QR → User kirim balik Kode via WA → Verifikasi
-```
+[Detail Konsep →](docs/00-konsep-dasar.md)
 
 ---
 
 ## Arsitektur
 
 ```
-main.go  →  Container (DI)  →  Handler  →  Service  →  Repository  →  PostgreSQL
+main.go → Container (DI) → Handler → Service → Repository → PostgreSQL
 ```
 
-| Layer | Paket | Tanggung Jawab |
-|-------|-------|----------------|
-| **Handler** | `auth/handler/auth/`, `auth/handler/webhook/` | Menerima & merespons HTTP request |
-| **Service** | `auth/service/auth/`, `auth/service/` | Business logic, JWT, integrasi WhatsApp API |
-| **Repository** | `auth/repository/auth/`, `auth/repository/` | Akses database dengan Generic Repository Pattern |
-| **Middleware** | `auth/middleware/` | JWT Auth, Rate Limiting, Request ID, Panic Recovery |
+Dibangun dengan Go 1.25, Gin, Bun ORM, PostgreSQL 18, JWT HS512, dan bcrypt.
 
----
-
-## Teknologi
-
-| Komponen | Teknologi |
-|----------|-----------|
-| Bahasa | Go 1.25 |
-| HTTP Router | Gin v1.10 |
-| ORM | Bun (Uptrace) + pgdialect |
-| Database | PostgreSQL 18 |
-| Autentikasi | JWT HS512 (Access + Refresh Token) |
-| Validasi | go-playground/validator v10 |
-| Logging | Zap (uber-go) + Lumberjack rotation |
-| Hashing | bcrypt (cost 12) |
-| ID | UUID v7 |
-| Deployment | Docker + Docker Compose |
-
----
-
-## Struktur Proyek
-
-```
-reverse-auth/
-├── main.go                          # Entry point server HTTP
-├── cmd/migrate/main.go              # Runner migrasi database
-├── auth/
-│   ├── container.go                 # Dependency Injection container
-│   ├── route.go                     # Definisi HTTP routes
-│   ├── conf/config.go               # Konfigurasi dari environment
-│   ├── handler/auth/                # Handler register, login, logout
-│   ├── handler/webhook/             # Handler webhook WhatsApp
-│   ├── model/                       # Struktur pesan WhatsApp API
-│   ├── repository/                  # Generic Repository + koneksi DB
-│   │   ├── auth/                    # Auth, Session, Verification, Attempt repos
-│   │   └── migrations/              # 7 file migrasi SQL
-│   ├── service/                     # WhatsApp API client, QR, validator
-│   │   └── auth/                    # Auth service + JWT service
-│   ├── middleware/                  # JWT auth, rate limiter, request ID
-│   ├── log/                         # Zap logger + context injection
-│   ├── response/                    # JSON response helpers
-│   └── testhelper/                  # Test DB setup + Docker orchestration
-├── scripts/                         # test.sh, check-errors.sh
-├── docker-testing/                  # Docker Compose full-stack testing
-├── docker-compose.yml               # PostgreSQL 18 untuk development lokal
-└── .env.example                     # Template environment variable
-```
-
----
-
-## Skema Database
-
-| Tabel | Deskripsi |
-|-------|-----------|
-| **users** | Akun user (registrasi via WA/email, status, password hash) |
-| **sessions** | Session JWT untuk refresh token tracking |
-| **verification_codes** | Kode verifikasi pending, termasuk phantom code (anti-enumeration) |
-| **verification_attempts** | Tracking percobaan gagal dengan escalating block (5x→30m, 10x→2j, 15x→24j) |
+[Detail Arsitektur & Teknologi →](docs/01-arsitektur.md) · [Struktur Proyek →](docs/02-struktur-proyek.md)
 
 ---
 
@@ -101,136 +30,49 @@ Base path: `/api/v1.0`
 
 | Method | Path | Deskripsi | Auth |
 |--------|------|-----------|------|
-| `POST` | `/wa-register` | Inisiasi registrasi via WhatsApp | Tidak |
+| `POST` | `/wa-register` | Registrasi via WhatsApp | Tidak |
 | `POST` | `/email-register` | Registrasi via email | Tidak |
-| `POST` | `/login` | Login (email/nomor + password) | Tidak |
-| `POST` | `/refresh` | Perbarui access token dengan refresh token cookie | Cookie |
-| `POST` | `/logout` | Hapus semua session user | JWT Bearer |
-| `POST` | `/whatsapp/` | Webhook penerima pesan WhatsApp | Tidak |
+| `POST` | `/login` | Login | Tidak |
+| `POST` | `/refresh` | Refresh access token | Cookie |
+| `POST` | `/logout` | Hapus semua session | JWT Bearer |
+| `POST` | `/whatsapp/` | Webhook WhatsApp | Tidak |
 
----
-
-## Alur Registrasi WhatsApp (Reverse Verify)
-
-```
-1. User → POST /wa-register { nomor, nama, password? }
-2. Server → Generate kode: "VRFY-XXXXXXXX"
-3. Server → Bentuk deep link wa.me/?text=VERIFY:VRFY-XXXXXXXX
-4. Server → Berikan deep link ke klien (selalu sukses, termasuk phantom)
-5. Klien → Generate QR dari deep link (client-side, tanpa panggil Meta API)
-6. User → Scan QR / klik link → WhatsApp terbuka → Kirim pesan pre-filled
-7. Server → Terima webhook WhatsApp → Parse kode → Verifikasi
-8. Server → Buat akun user + tandai kode sebagai used
-9. Server → Balas WhatsApp: "Verifikasi berhasil."
-10. User → Login dengan JWT
-```
+[Detail API →](docs/04-api-endpoints.md) · [Alur Registrasi WhatsApp →](docs/05-alur-registrasi.md)
 
 ---
 
 ## Keamanan
 
-### Anti-Enumeration
-- **Phantom verification code**: Nomor yang sudah terdaftar atau memiliki kode pending tetap akan dibuatkan kode phantom. Tidak bisa dibedakan oleh attacker.
-- **Constant-time response**: Semua endpoint registrasi ditunda 4–8 detik secara acak setelah pemrosesan.
-- **Generic WhatsApp reply**: Semua error case (kadaluarsa, phantom, tidak valid) membalas dengan pesan yang sama.
-- **Generic JSON response**: Baik phantom maupun valid menghasilkan struktur respons identik.
+- **Phantom verification codes** — anti-enumeration dengan kode hantu yang tidak bisa dibedakan
+- **Constant-time response** — delay acak 4–8 detik pada endpoint registrasi
+- **Rate limiting** — 5 req/menit per IP (registrasi), 3 pesan/30 detik per sender (webhook)
+- **Escalating block** — 5x gagal → 30m, 10x → 2j, 15x → 24j
+- **Multi-session** — kontrol jumlah session per user via `ALLOW_MULTI_SESSION` & `MAX_SESSION`
 
-### Brute-Force Protection
-- **Rate limiting IP** pada endpoint registrasi: maksimal 5 request/menit.
-- **Rate limiting per-sender** pada webhook: maksimal 3 pesan per 30 detik.
-- **Escalating block** pada `verification_attempts`: 5x gagal → blokir 30 menit, 10x → 2 jam, 15x → 24 jam.
-- **Kode verifikasi kadaluarsa** setelah 15 menit.
-- **Background cleanup** menghapus kode kadaluarsa setiap 5 menit.
+[Detail Keamanan →](docs/06-keamanan.md)
 
-### Multi-Session
+---
 
-Secara default, user dapat login dari banyak perangkat sekaligus. Perilaku ini dikontrol oleh dua variabel:
+## Database
 
-| Variabel | Nilai | Perilaku |
-|----------|-------|----------|
-| `ALLOW_MULTI_SESSION=false` | — | Hanya 1 session per user — login baru menghapus semua session lama |
-| `ALLOW_MULTI_SESSION=true` | `MAX_SESSION=5` | Maksimum 5 session — login ke-6 akan menghapus session tertua |
-| `ALLOW_MULTI_SESSION=true` | `MAX_SESSION=0` | Unlimited — session tidak pernah dihapus otomatis |
+| Tabel | Deskripsi |
+|-------|-----------|
+| `users` | Akun user |
+| `sessions` | Session JWT |
+| `verification_codes` | Kode verifikasi (+ phantom) |
+| `verification_attempts` | Tracking percobaan gagal |
 
-Session dibuat saat login (`/login`) dan token refresh (`/refresh`). Logout (`/logout`) selalu menghapus seluruh session tanpa memandang konfigurasi.
+[Detail Skema →](docs/03-skema-database.md)
 
 ---
 
 ## Memulai Development
 
-### Prasyarat
-- Go 1.25+
-- Docker & Docker Compose
-- Akun WhatsApp Business API (untuk integrasi WA)
-
-### Setup Lokal
-
 ```bash
-# 1. Clone repository
-git clone <repo-url> && cd reverse-verify
-
-# 2. Jalankan PostgreSQL
-docker compose up -d
-
-# 3. Salin dan isi konfigurasi
-cp .env.example .env
-
-# 4. Jalankan migrasi database
-go run ./cmd/migrate/
-
-# 5. Jalankan server (port 8080)
-go run .
+docker compose up -d                    # PostgreSQL
+cp .env.example .env                    # Konfigurasi
+go run ./cmd/migrate/                   # Migrasi
+go run .                                # Server (port 8080)
 ```
 
-### Testing
-
-```bash
-# Jalankan semua test (otomatis start PostgreSQL via Docker)
-./scripts/test.sh
-
-# Atau manual
-go test -count=1 -timeout 60s ./auth/...
-
-# Lint check
-./scripts/check-errors.sh
-```
-
-### Docker Full-Stack
-
-```bash
-cd docker-testing
-./run.sh
-# Menjalankan: postgres + migrate + app dalam Docker
-```
-
----
-
-## Environment Variables
-
-Lihat `.env.example` untuk template lengkap.
-
-| Variabel | Deskripsi | Default |
-|----------|-----------|---------|
-| `APP_ENV` | Environment (`dev`/`prod`) | `dev` |
-| `LOG_LEVEL` | Level log (`debug`/`info`/`warn`/`error`) | `debug` |
-| `DB_HOST` | Host PostgreSQL | `localhost` |
-| `DB_PORT` | Port PostgreSQL | `5432` |
-| `DB_USER` | User database | `postgres` |
-| `DB_PASSWORD` | Password database | — |
-| `DB_NAME` | Nama database | `postgres` |
-| `DB_SSLMODE` | SSL mode | `disable` |
-| `TOKEN_WHATSAPP` | Token akses WhatsApp Cloud API | — |
-| `BASE_URL_GRAPH_API` | Base URL Meta Graph API | — |
-| `PHONE_NUMBER_ID` | ID nomor WhatsApp bisnis (Meta) | — |
-| `WHATSAPP_PHONE` | Nomor WhatsApp format internasional tanpa `+` (untuk wa.me) | — |
-| `SMTP_HOST` | Host SMTP server | — |
-| `SMTP_PORT` | Port SMTP server | — |
-| `SMTP_USER` | Username SMTP | — |
-| `SMTP_PASS` | Password SMTP | — |
-| `JWT_ACCESS_SECRET` | Secret untuk access token | — |
-| `JWT_REFRESH_SECRET` | Secret untuk refresh token | — |
-| `JWT_ACCESS_TTL` | Durasi access token | `15m` |
-| `JWT_REFRESH_TTL` | Durasi refresh token | `168h` |
-| `REFRESH_COOKIE_NAME` | Nama cookie untuk menyimpan refresh token | `refresh_token` |
-| `ALLOW_MULTI_SESSION` | Izinkan user memiliki lebih dari satu session | `true` |
-| `MAX_SESSION` | Maksimum session per user (0 = unlimited) | `5` |
+[Detail Setup & Testing →](docs/07-memulai-development.md) · [Environment Variables →](docs/08-environment-variables.md)
